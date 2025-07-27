@@ -1,7 +1,8 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { AlertTriangle } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useTranslation } from "react-i18next"
 
 interface ErrorFallbackProps {
   error: Error
@@ -9,14 +10,19 @@ interface ErrorFallbackProps {
 }
 
 export function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
+  const { t } = useTranslation()
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
-      <div className="text-center">
-        <AlertTriangle className="mx-auto h-12 w-12 text-red-500 mb-4" />
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">حدث خطأ غير متوقع</h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-4">{error.message}</p>
-        <Button onClick={resetErrorBoundary}>إعادة المحاولة</Button>
-      </div>
+    <div className="flex items-center justify-center min-h-screen bg-background p-4">
+      <Card className="w-full max-w-md text-center">
+        <CardHeader>
+          <CardTitle className="text-destructive">{t("error.title")}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-muted-foreground">{t("error.message")}</p>
+          <pre className="bg-muted p-3 rounded-md text-sm text-left overflow-auto max-h-48">{error.message}</pre>
+          <Button onClick={resetErrorBoundary}>{t("error.reset")}</Button>
+        </CardContent>
+      </Card>
     </div>
   )
 }

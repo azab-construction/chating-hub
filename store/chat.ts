@@ -2,96 +2,107 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import type { Chat, Message } from "@/types/chat"
 
-interface ChatStore {
+interface ChatState {
   chats: Chat[]
-  activeChat: string | null
-  selectedModel: string
-  createChat: () => void
-  deleteChat: (chatId: string) => void
-  setActiveChat: (chatId: string) => void
+  selectedChatId: string | null
+  addChat: (initialMessage?: Message) => void
+  selectChat: (id: string) => void
   addMessage: (chatId: string, message: Message) => void
-  updateChatTitle: (chatId: string, title: string) => void
-  setSelectedModel: (model: string) => void
+  updateMessage: (chatId: string, messageId: string, updates: Partial<Message>) => void
+  removeChat: (id: string) => void
+  startNewChat: (initialMessage: Message) => void
+  selectedChat: Chat | null
 }
 
-export const useChatStore = create<ChatStore>()(
+export const useChatStore = create<ChatState>()(
   persist(
     (set, get) => ({
       chats: [],
-      activeChat: null,
-      selectedModel: "gpt-4",
+      selectedChatId: null,
+      selectedChat: null,
 
-      createChat: () => {
+      addChat: (initialMessage) => {
         const newChat: Chat = {
           id: Date.now().toString(),
-          title: "محادثة جديدة",
-          messages: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          title: initialMessage ? initialMessage.content.substring(0, 30) + "..." : "New Chat",
+          messages: initialMessage ? [initialMessage] : [],
+          createdAt: new Date().toISOString(),
         }
-
         set((state) => ({
           chats: [newChat, ...state.chats],
-          activeChat: newChat.id,
+          selectedChatId: newChat.id,
+          selectedChat: newChat,
         }))
       },
 
-      deleteChat: (chatId: string) => {
+      selectChat: (id) => {
         set((state) => {
-          const newChats = state.chats.filter((chat) => chat.id !== chatId)
-          const newActiveChat =
-            state.activeChat === chatId ? (newChats.length > 0 ? newChats[0].id : null) : state.activeChat
+          const chat = state.chats.find((c) => c.id === id)
+          return { selectedChatId: id, selectedChat: chat || null }
+        })
+      },
 
+      addMessage: (chatId, message) => {
+        set((state) => {
+          const updatedChats = state.chats.map((chat) =>
+            chat.id === chatId
+              ? {
+                  ...chat,
+                  messages: [...chat.messages, message],
+                  title: chat.messages.length === 0 ? message.content.substring(0, 30) + "..." : chat.title,
+                }
+              : chat,
+          )
+          const updatedSelectedChat = updatedChats.find((c) => c.id === chatId)
+          return { chats: updatedChats, selectedChat: updatedSelectedChat || null }
+        })
+      },
+
+      updateMessage: (chatId, messageId, updates) => {
+        set((state) => {
+          const updatedChats = state.chats.map((chat) =>
+            chat.id === chatId
+              ? {
+                  ...chat,
+                  messages: chat.messages.map((msg) => (msg.id === messageId ? { ...msg, ...updates } : msg)),
+                }
+              : chat,
+          )
+          const updatedSelectedChat = updatedChats.find((c) => c.id === chatId)
+          return { chats: updatedChats, selectedChat: updatedSelectedChat || null }
+        })
+      },
+
+      removeChat: (id) => {
+        set((state) => {
+          const filteredChats = state.chats.filter((chat) => chat.id !== id)
+          const newSelectedChatId = state.selectedChatId === id ? filteredChats[0]?.id || null : state.selectedChatId
+          const newSelectedChat = filteredChats.find((c) => c.id === newSelectedChatId) || null
           return {
-            chats: newChats,
-            activeChat: newActiveChat,
+            chats: filteredChats,
+            selectedChatId: newSelectedChatId,
+            selectedChat: newSelectedChat,
           }
         })
       },
 
-      setActiveChat: (chatId: string) => {
-        set({ activeChat: chatId })
-      },
-
-      addMessage: (chatId: string, message: Message) => {
+      startNewChat: (initialMessage) => {
+        const newChat: Chat = {
+          id: Date.now().toString(),
+          title: initialMessage.content.substring(0, 30) + "...",
+          messages: [initialMessage],
+          createdAt: new Date().toISOString(),
+        }
         set((state) => ({
-          chats: state.chats.map((chat) => {
-            if (chat.id === chatId) {
-              const updatedChat = {
-                ...chat,
-                messages: [...chat.messages, message],
-                updatedAt: new Date(),
-              }
-
-              // Update title based on first user message
-              if (chat.messages.length === 0 && message.role === "user") {
-                updatedChat.title = message.content.slice(0, 50) + (message.content.length > 50 ? "..." : "")
-              }
-
-              return updatedChat
-            }
-            return chat
-          }),
+          chats: [newChat, ...state.chats],
+          selectedChatId: newChat.id,
+          selectedChat: newChat,
         }))
-      },
-
-      updateChatTitle: (chatId: string, title: string) => {
-        set((state) => ({
-          chats: state.chats.map((chat) => (chat.id === chatId ? { ...chat, title, updatedAt: new Date() } : chat)),
-        }))
-      },
-
-      setSelectedModel: (model: string) => {
-        set({ selectedModel: model })
       },
     }),
     {
-      name: "chat-store",
-      partialize: (state) => ({
-        chats: state.chats,
-        activeChat: state.activeChat,
-        selectedModel: state.selectedModel,
-      }),
+      name: "ai-chat-hub-storage", // unique name
+      getStorage: () => localStorage, // Use localStorage for persistence
     },
   ),
 )

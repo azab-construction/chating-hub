@@ -1,35 +1,26 @@
 import type React from "react"
-import "./globals.css"
+import type { Metadata } from "next"
 import { Inter } from "next/font/google"
-import { dir } from "i18next"
-import { languages } from "@/i18n/settings"
-import Providers from "@/components/providers"
-import { Toaster } from "@/components/ui/toaster"
+import "./globals.css"
+import { Providers } from "@/components/providers"
 
 const inter = Inter({ subsets: ["latin"] })
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "AI Chat Hub",
-  description: "Your personal AI assistant",
+  description: "مركز المحادثة الذكي - تحدث مع نماذج الذكاء الاصطناعي المختلفة",
     generator: 'v0.dev'
-}
-
-export async function generateStaticParams() {
-  return languages.map((lng) => ({ lng }))
 }
 
 export default function RootLayout({
   children,
-  params: { lng },
 }: {
   children: React.ReactNode
-  params: { lng: string }
 }) {
   return (
-    <html lang={lng} dir={dir(lng)}>
+    <html lang="ar" dir="rtl">
       <body className={inter.className}>
-        <Providers lng={lng}>{children}</Providers>
-        <Toaster />
+        <Providers>{children}</Providers>
       </body>
     </html>
   )

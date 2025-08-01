@@ -1,133 +1,149 @@
 "use client"
-import { useState } from "react"
-import { useSession, signOut } from "next-auth/react"
-import { useChatStore } from "@/store/chat"
+
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/dialog"
-import { PlusIcon, MessageSquareIcon, SettingsIcon, LogOutIcon, MenuIcon, Trash2Icon } from "lucide-react"
-import { useTranslation } from "react-i18next"
+import { Separator } from "@/components/ui/separator"
+import { useChatStore } from "@/store/chat"
+import { MessageSquare, Plus, Settings, Menu, Trash2, Edit3 } from "lucide-react"
+import { useState } from "react"
 
-export function Sidebar() {
-  const { data: session } = useSession()
-  const { chats, addChat, selectChat, removeChat, selectedChatId } = useChatStore()
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const { t } = useTranslation()
+interface SidebarProps {
+  isOpen: boolean
+  onToggle: () => void
+}
 
-  const handleNewChat = () => {
-    addChat()
-    setIsSidebarOpen(false)
+export function Sidebar({ isOpen, onToggle }: SidebarProps) {
+  const { chats, activeChat, createChat, setActiveChat, deleteChat, updateChatTitle } = useChatStore()
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editTitle, setEditTitle] = useState("")
+
+  const handleCreateChat = () => {
+    createChat()
   }
 
-  const handleSelectChat = (id: string) => {
-    selectChat(id)
-    setIsSidebarOpen(false)
+  const handleEditTitle = (chatId: string, currentTitle: string) => {
+    setEditingId(chatId)
+    setEditTitle(currentTitle)
   }
 
-  const handleRemoveChat = (id: string) => {
-    removeChat(id)
+  const handleSaveTitle = (chatId: string) => {
+    if (editTitle.trim()) {
+      updateChatTitle(chatId, editTitle.trim())
+    }
+    setEditingId(null)
+    setEditTitle("")
   }
-
-  const sidebarContent = (
-    <div className="flex h-full max-h-screen flex-col space-y-4 p-4 bg-card text-card-foreground border-r">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">{t("sidebar.title")}</h2>
-        <Button variant="ghost" size="icon" onClick={handleNewChat} aria-label={t("sidebar.newChat")}>
-          <PlusIcon className="h-5 w-5" />
-        </Button>
-      </div>
-      <ScrollArea className="flex-1 pr-2">
-        <div className="space-y-2">
-          {chats.map((chat) => (
-            <div
-              key={chat.id}
-              className={`flex items-center justify-between rounded-md p-2 cursor-pointer transition-colors ${
-                selectedChatId === chat.id ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-              }`}
-              onClick={() => handleSelectChat(chat.id)}
-            >
-              <div className="flex items-center gap-2">
-                <MessageSquareIcon className="h-4 w-4" />
-                <span className="truncate">{chat.title || t("sidebar.untitledChat")}</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleRemoveChat(chat.id)
-                }}
-                aria-label={t("sidebar.deleteChat")}
-              >
-                <Trash2Icon className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
-        </div>
-      </ScrollArea>
-      <div className="border-t pt-4">
-        {session?.user ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="w-full justify-start gap-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage
-                    src={session.user.image || "/placeholder-avatar.jpg"}
-                    alt={session.user.name || "User"}
-                  />
-                  <AvatarFallback>{session.user.name?.[0] || "U"}</AvatarFallback>
-                </Avatar>
-                <span className="truncate">{session.user.name || t("sidebar.guest")}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56">
-              <DropdownMenuLabel>{t("sidebar.myAccount")}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => alert("Go to settings")} className="cursor-pointer">
-                <SettingsIcon className="mr-2 h-4 w-4" />
-                <span>{t("sidebar.settings")}</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => signOut()} className="cursor-pointer text-destructive">
-                <LogOutIcon className="mr-2 h-4 w-4" />
-                <span>{t("sidebar.signOut")}</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => alert("Go to sign in")}>
-            <Avatar className="h-8 w-8">
-              <AvatarFallback>G</AvatarFallback>
-            </Avatar>
-            <span>{t("sidebar.signIn")}</span>
-          </Button>
-        )}
-      </div>
-    </div>
-  )
 
   return (
     <>
-      <div className="hidden md:block w-64 flex-shrink-0">{sidebarContent}</div>
-      <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-        <SheetTrigger asChild className="md:hidden absolute top-4 left-4 z-50">
-          <Button variant="outline" size="icon" aria-label={t("sidebar.openMenu")}>
-            <MenuIcon className="h-6 w-6" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-64 p-0">
-          {sidebarContent}
-        </SheetContent>
-      </Sheet>
+      <div
+        className={`fixed inset-y-0 right-0 z-50 w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ${
+          isOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="flex h-full flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">المحادثات</h2>
+            <Button variant="ghost" size="sm" onClick={onToggle}>
+              <Menu className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* New Chat Button */}
+          <div className="p-4">
+            <Button onClick={handleCreateChat} className="w-full justify-start bg-transparent" variant="outline">
+              <Plus className="h-4 w-4 ml-2" />
+              محادثة جديدة
+            </Button>
+          </div>
+
+          <Separator />
+
+          {/* Chat List */}
+          <ScrollArea className="flex-1 px-4">
+            <div className="space-y-2 py-4">
+              {chats.map((chat) => (
+                <div
+                  key={chat.id}
+                  className={`group relative rounded-lg p-3 cursor-pointer transition-colors ${
+                    activeChat === chat.id
+                      ? "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
+                      : "hover:bg-gray-50 dark:hover:bg-gray-700"
+                  }`}
+                  onClick={() => setActiveChat(chat.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3 space-x-reverse flex-1 min-w-0">
+                      <MessageSquare className="h-4 w-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                      {editingId === chat.id ? (
+                        <input
+                          type="text"
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          onBlur={() => handleSaveTitle(chat.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              handleSaveTitle(chat.id)
+                            } else if (e.key === "Escape") {
+                              setEditingId(null)
+                              setEditTitle("")
+                            }
+                          }}
+                          className="flex-1 bg-transparent border-none outline-none text-sm"
+                          autoFocus
+                        />
+                      ) : (
+                        <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{chat.title}</span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center space-x-1 space-x-reverse opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleEditTitle(chat.id, chat.title)
+                        }}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Edit3 className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          deleteChat(chat.id)
+                        }}
+                        className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{chat.messages.length} رسالة</div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+
+          <Separator />
+
+          {/* Settings */}
+          <div className="p-4">
+            <Button variant="ghost" className="w-full justify-start">
+              <Settings className="h-4 w-4 ml-2" />
+              الإعدادات
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Overlay */}
+      {isOpen && <div className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden" onClick={onToggle} />}
     </>
   )
 }

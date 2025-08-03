@@ -1,3 +1,6 @@
+// إجبار المسار يكون ديناميكي عشان يحل مشكلة Dynamic Server Usage
+export const dynamic = "force-dynamic";
+
 import express from "express"
 import { google } from "googleapis"
 import { PrismaClient } from "@prisma/client"

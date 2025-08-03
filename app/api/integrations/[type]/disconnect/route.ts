@@ -1,3 +1,6 @@
+// إجبار المسار يكون ديناميكي عشان يحل مشكلة Dynamic Server Usage
+export const dynamic = "force-dynamic";
+
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "../../../auth/[...nextauth]/route"

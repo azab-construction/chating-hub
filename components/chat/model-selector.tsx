@@ -1,30 +1,28 @@
 "use client"
 
+import * as React from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useChatStore } from "@/store/chat"
-
-const models = [
-  { id: "gpt-4", name: "GPT-4", provider: "OpenAI" },
-  { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo", provider: "OpenAI" },
-  { id: "claude-3", name: "Claude 3", provider: "Anthropic" },
-  { id: "gemini-pro", name: "Gemini Pro", provider: "Google" },
-]
+import { useTranslation } from "react-i18next"
 
 export function ModelSelector() {
-  const { selectedModel, setSelectedModel } = useChatStore()
+  const { t } = useTranslation()
+  const [selectedModel, setSelectedModel] = React.useState("gpt-4o") // Default model
+
+  const models = [
+    { value: "gpt-4o", label: "GPT-4o" },
+    { value: "claude-3-opus", label: "Claude 3 Opus" },
+    { value: "deepseek-chat", label: "DeepSeek Chat" },
+  ]
 
   return (
     <Select value={selectedModel} onValueChange={setSelectedModel}>
-      <SelectTrigger className="w-48">
-        <SelectValue placeholder="اختر النموذج" />
+      <SelectTrigger className="w-[180px]">
+        <SelectValue placeholder={t("modelSelector.placeholder")} />
       </SelectTrigger>
       <SelectContent>
         {models.map((model) => (
-          <SelectItem key={model.id} value={model.id}>
-            <div className="flex flex-col items-start">
-              <span className="font-medium">{model.name}</span>
-              <span className="text-xs text-gray-500">{model.provider}</span>
-            </div>
+          <SelectItem key={model.value} value={model.value}>
+            {model.label}
           </SelectItem>
         ))}
       </SelectContent>

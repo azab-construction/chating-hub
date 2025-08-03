@@ -1,125 +1,117 @@
 "use client"
 
-import type React from "react"
-
+import type * as React from "react"
 import { useState, useRef, useEffect } from "react"
+import { useChatStore } from "@/store/chat"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { SendIcon, Loader2Icon } from "lucide-react"
 import { MessageList } from "@/components/chat/message-list"
 import { ModelSelector } from "@/components/chat/model-selector"
 import { FileUpload } from "@/components/chat/file-upload"
-import { useChatStore } from "@/store/chat"
-import { Send, Paperclip } from "lucide-react"
-import type { Message } from "@/types/chat"
+import { useTranslation } from "react-i18next"
 
 export function ChatInterface() {
+  const { selectedChat, addMessage, updateMessage, startNewChat } = useChatStore()
   const [input, setInput] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [isSending, setIsSending] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const { t } = useTranslation()
 
-  const { activeChat, chats, addMessage, selectedModel, createChat } = useChatStore()
-
-  const currentChat = chats.find((chat) => chat.id === activeChat)
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
 
   useEffect(() => {
-    if (!activeChat && chats.length === 0) {
-      createChat()
-    }
-  }, [activeChat, chats.length, createChat])
+    scrollToBottom()
+  }, [selectedChat?.messages])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || isLoading || !activeChat) return
+    if (!input.trim() || isSending) return
 
-    const userMessage: Message = {
+    const userMessage = {
       id: Date.now().toString(),
-      content: input.trim(),
-      role: "user",
-      timestamp: new Date(),
+      content: input,
+      role: "user" as const,
+      timestamp: new Date().toISOString(),
     }
 
-    addMessage(activeChat, userMessage)
+    if (!selectedChat) {
+      startNewChat(userMessage)
+    } else {
+      addMessage(selectedChat.id, userMessage)
+    }
+
     setInput("")
-    setIsLoading(true)
+    setIsSending(true)
 
     // Simulate AI response
-    setTimeout(() => {
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: `هذه استجابة تجريبية من ${selectedModel}. تم استلام رسالتك: "${userMessage.content}"`,
-        role: "assistant",
-        timestamp: new Date(),
-      }
-      addMessage(activeChat, aiMessage)
-      setIsLoading(false)
-    }, 1000)
-  }
-
-  const handleFileUpload = (files: File[]) => {
-    if (!activeChat) return
-
-    files.forEach((file) => {
-      const fileMessage: Message = {
-        id: Date.now().toString() + Math.random(),
-        content: `تم رفع الملف: ${file.name}`,
-        role: "user",
-        timestamp: new Date(),
-        attachments: [{ name: file.name, size: file.size, type: file.type }],
-      }
-      addMessage(activeChat, fileMessage)
+    const aiResponseId = (Date.now() + 1).toString()
+    addMessage(selectedChat?.id || "new", {
+      id: aiResponseId,
+      content: "",
+      role: "assistant" as const,
+      timestamp: new Date().toISOString(),
+      isTyping: true,
     })
-  }
 
-  if (!currentChat) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">مرحباً بك في AI Chat Hub</h2>
-          <p className="text-gray-600 dark:text-gray-400">ابدأ محادثة جديدة للتحدث مع نماذج الذكاء الاصطناعي</p>
-        </div>
-      </div>
-    )
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      const aiContent = t("chat.simulatedResponse", { query: userMessage.content })
+      updateMessage(selectedChat?.id || "new", aiResponseId, {
+        content: aiContent,
+        isTyping: false,
+      })
+    } catch (error) {
+      console.error("Error sending message:", error)
+      updateMessage(selectedChat?.id || "new", aiResponseId, {
+        content: t("chat.errorMessage"),
+        isTyping: false,
+      })
+    } finally {
+      setIsSending(false)
+      scrollToBottom()
+    }
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="border-b border-gray-200 dark:border-gray-700 p-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{currentChat.title}</h1>
-          <ModelSelector />
-        </div>
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-hidden">
-        <MessageList messages={currentChat.messages} isLoading={isLoading} />
-      </div>
-
-      {/* Input */}
-      <div className="border-t border-gray-200 dark:border-gray-700 p-4">
-        <form onSubmit={handleSubmit} className="flex items-end space-x-2 space-x-reverse">
-          <div className="flex-1">
-            <div className="relative">
-              <Input
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="اكتب رسالتك هنا..."
-                disabled={isLoading}
-                className="pr-12"
-              />
-              <div className="absolute left-2 top-1/2 transform -translate-y-1/2">
-                <FileUpload onFileUpload={handleFileUpload}>
-                  <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0">
-                    <Paperclip className="h-4 w-4" />
-                  </Button>
-                </FileUpload>
-              </div>
-            </div>
+    <div className="flex flex-col h-full p-4">
+      <div className="flex-1 overflow-y-auto pr-2">
+        {selectedChat ? (
+          <MessageList messages={selectedChat.messages} />
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+            <p className="text-lg">{t("chat.noChatSelected")}</p>
+            <p className="text-sm">{t("chat.startTyping")}</p>
           </div>
-          <Button type="submit" disabled={!input.trim() || isLoading} size="sm">
-            <Send className="h-4 w-4" />
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+      <div className="mt-4 border-t pt-4">
+        <div className="flex items-center gap-2 mb-4">
+          <ModelSelector />
+          <FileUpload />
+        </div>
+        <form onSubmit={handleSendMessage} className="flex gap-2">
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={t("chat.inputPlaceholder")}
+            className="flex-1 resize-none"
+            rows={1}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault()
+                handleSendMessage(e)
+              }
+            }}
+            disabled={isSending}
+          />
+          <Button type="submit" size="icon" disabled={!input.trim() || isSending}>
+            {isSending ? <Loader2Icon className="h-5 w-5 animate-spin" /> : <SendIcon className="h-5 w-5" />}
+            <span className="sr-only">{t("chat.send")}</span>
           </Button>
         </form>
       </div>

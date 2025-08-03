@@ -1,6 +1,4 @@
 "use client"
-
-import { useEffect, useRef } from "react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { MessageItem } from "@/components/chat/message-item"
 import { LoadingMessage } from "@/components/chat/loading-message"
@@ -8,25 +6,16 @@ import type { Message } from "@/types/chat"
 
 interface MessageListProps {
   messages: Message[]
-  isLoading?: boolean
 }
 
-export function MessageList({ messages, isLoading }: MessageListProps) {
-  const scrollRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
-  }, [messages, isLoading])
-
+export function MessageList({ messages }: MessageListProps) {
   return (
-    <ScrollArea className="h-full">
-      <div ref={scrollRef} className="p-4 space-y-4">
+    <ScrollArea className="h-full pr-4">
+      <div className="space-y-4">
         {messages.map((message) => (
           <MessageItem key={message.id} message={message} />
         ))}
-        {isLoading && <LoadingMessage />}
+        {messages.some((msg) => msg.isTyping) && <LoadingMessage />}
       </div>
     </ScrollArea>
   )

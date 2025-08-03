@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "next build",
+    "approve-builds": "pnpm approve-builds @prisma/client @prisma/engines core-js prisma unrs-resolver",
+    "build": "pnpm approve-builds @prisma/client @prisma/engines core-js prisma unrs-resolver && prisma generate && next build",
     "dev": "next dev",
-    "postinstall": "prisma generate && prisma migrate deploy",
+    "postinstall": "pnpm approve-builds @prisma/client @prisma/engines core-js prisma unrs-resolver && prisma generate && prisma migrate deploy",
     "lint": "next lint",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
